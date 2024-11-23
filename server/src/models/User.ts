@@ -1,12 +1,10 @@
 import { Schema, model, type Document } from 'mongoose';
 import bcrypt from 'bcrypt';
-
-// import schema from Book.js
-import bookSchema from './Book.js';
-import type { BookDocument } from './Book.js';
+import bookSchema, { BookDocument } from './Book.js';
+import type { CallbackError } from 'mongoose';
 
 export interface UserDocument extends Document {
-  id: string;
+  _id: string;
   username: string;
   email: string;
   password: string;
@@ -32,36 +30,49 @@ const userSchema = new Schema<UserDocument>(
       type: String,
       required: true,
     },
-    // set savedBooks to be an array of data that adheres to the bookSchema
-    savedBooks: [bookSchema],
+    // Set savedBooks to be an array of data adhering to the bookSchema
+    savedBooks: {
+      type: [bookSchema],
+      default: [],
+    },
   },
-  // set this to use virtual below
   {
     toJSON: {
-      virtuals: true,
+      virtuals: true, // Include virtuals in JSON output
     },
   }
 );
 
-// hash user password
+// Hash user password before saving
 userSchema.pre('save', async function (next) {
-  if (this.isNew || this.isModified('password')) {
-    const saltRounds = 10;
-    this.password = await bcrypt.hash(this.password, saltRounds);
+  try {
+    if (this.isNew || this.isModified('password')) {
+      const saltRounds = 10;
+      this.password = await bcrypt.hash(this.password, saltRounds);
+    }
+    next();
+  } catch (err) {
+    if (err instanceof Error) {
+      next(err as CallbackError); // Safely cast after confirming it's an Error
+    } else {
+      next(new Error('Unknown error occurred during pre-save')); // Handle unknown cases
+    }
   }
-
-  next();
 });
 
-// custom method to compare and validate password for logging in
+// Custom method to validate password
 userSchema.methods.isCorrectPassword = async function (password: string) {
-  return await bcrypt.compare(password, this.password);
+  return bcrypt.compare(password, this.password);
 };
 
-// when we query a user, we'll also get another field called `bookCount` with the number of saved books we have
-userSchema.virtual('bookCount').get(function () {
+// Virtual property for book count
+userSchema.virtual('bookCount').get(function (this: UserDocument) {
   return this.savedBooks.length;
 });
+
+// Add indexes for performance
+userSchema.index({ email: 1 });
+userSchema.index({ username: 1 });
 
 const User = model<UserDocument>('User', userSchema);
 
