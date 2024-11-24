@@ -4,9 +4,7 @@ import { ApolloServer } from '@apollo/server';
 import db from './config/connection.js';
 import { typeDefs, resolvers } from './schemas/index.js';
 import { authMiddleware } from './services/auth.js';
-// Temporary workaround: Disable type checking for the import
-// Replace the import with:
-const { expressMiddleware }: any = require('@apollo/server/express');
+import { expressMiddleware } from '@apollo/server/express4';
 
 const app: Application = express();
 const PORT = process.env.PORT || 3001;

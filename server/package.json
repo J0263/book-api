@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
-    "start": "node dist/server.js",
+    "start": "NODE_OPTIONS='--experimental-specifier-resolution=node' node dist/server.js",
     "watch": "nodemon dist/server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
