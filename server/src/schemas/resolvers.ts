@@ -1,5 +1,5 @@
 import { AuthenticationError } from 'apollo-server-express';
-import User from '../models/User';
+import  User from '../models/User';
 import { signToken } from '../services/auth';
 import type { UserDocument } from '../models/User';
 
@@ -72,16 +72,14 @@ export const resolvers = {
       return { token, user };
     },
 
-    addUser: async (_: any, { username, email, password }: AddUserArgs) => {
-      // Explicitly type the creation result
-      const user: UserDocument = await User.create({ username, email, password });
-
+    addUser: async (_: any, { username, email, password }: { username: string; email: string; password: string }) => {
+      const user = await User.create({ username, email, password });
+    
       if (!user) {
         throw new Error('Failed to create user');
       }
-
-      // TypeScript knows user.username, user.email, and user._id are strings
-      const token = signToken(user.username, user.email, String(user._id));
+    
+      const token = signToken(user.username, user.email, user._id);
       return { token, user };
     },
 

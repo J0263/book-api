@@ -2,14 +2,14 @@ import { useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { useMutation } from '@apollo/client';
 import { Form, Button, Alert } from 'react-bootstrap';
-
 import { ADD_USER } from '../utils/mutations';
 import Auth from '../utils/auth';
 
 const SignupForm = ({ handleModalClose }: { handleModalClose: () => void }) => {
   const [userFormData, setUserFormData] = useState({ username: '', email: '', password: '' });
-  const [validated] = useState(false);
+  const [validated, setValidated] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   // GraphQL mutation hook
   const [addUser] = useMutation(ADD_USER);
@@ -26,6 +26,8 @@ const SignupForm = ({ handleModalClose }: { handleModalClose: () => void }) => {
     if (form.checkValidity() === false) {
       event.preventDefault();
       event.stopPropagation();
+      setValidated(true); // Mark the form as validated
+      return;
     }
 
     try {
@@ -33,26 +35,29 @@ const SignupForm = ({ handleModalClose }: { handleModalClose: () => void }) => {
         variables: { ...userFormData },
       });
 
+      if (!data) {
+        throw new Error('No data returned from the server');
+      }
+
       Auth.login(data.addUser.token);
       handleModalClose(); // Close modal after successful signup
-    } catch (err) {
-      console.error(err);
-      setShowAlert(true);
+      setUserFormData({ username: '', email: '', password: '' }); // Reset form data
+      setValidated(false); // Reset validation state
+    } catch (err: any) {
+      console.error('Signup error:', err.message || err);
+      setErrorMessage(err.message || 'An unknown error occurred during signup');
+      setShowAlert(true); // Show alert message
     }
-
-    setUserFormData({
-      username: '',
-      email: '',
-      password: '',
-    });
   };
 
   return (
     <>
       <Form noValidate validated={validated} onSubmit={handleFormSubmit}>
-        <Alert dismissible onClose={() => setShowAlert(false)} show={showAlert} variant="danger">
-          Something went wrong with your signup!
-        </Alert>
+        {showAlert && (
+          <Alert dismissible onClose={() => setShowAlert(false)} show={showAlert} variant="danger">
+            {errorMessage || 'Something went wrong with your signup!'}
+          </Alert>
+        )}
         <Form.Group className="mb-3">
           <Form.Label htmlFor="username">Username</Form.Label>
           <Form.Control
